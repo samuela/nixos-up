@@ -7,3 +7,5 @@ From the NixOS installation USB/CD:
 ```
 curl --fail --silent https://raw.githubusercontent.com/samuela/nixos-up/main/nixos-up.ml > nixos-up.ml && chmod +x nixos-up.ml && sudo ./nixos-up.ml
 ```
+
+You can check out a video demonstrating the process here: https://youtu.be/f7DzbiRD99Q.
