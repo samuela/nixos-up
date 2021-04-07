@@ -12,6 +12,9 @@ environment.
 open Printf;;
 open Sys;;
 
+(* See https://ocaml.org/learn/tutorials/error_handling.html *)
+Printexc.record_backtrace true;;
+
 (* Check that we are sudo before proceeding *)
 if Unix.geteuid () <> 0 then (eprintf "nixos-up must be run as root!"; exit 1);;
 
