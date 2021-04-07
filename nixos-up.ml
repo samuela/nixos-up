@@ -37,7 +37,7 @@ let read_file path =
 (* Write `contents` to a file at `path`. *)
 let write_file path contents =
   let oc = open_out path in
-  fprintf oc "%s" contents;
+  output_string oc contents;
   close_out oc;;
 
 (* List of disk identifiers. *)
