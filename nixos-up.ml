@@ -78,21 +78,6 @@ let rec ask_disk () =
 let selected_disk = ask_disk ();;
 print_endline "";;
 
-let rec ask_hibernation () =
-  printf {|Will you be using hibernation on this computer (eg. for laptops)?
-    Hibernating requires more swap space. If you're not sure what to do, select
-    no for now and you can always change the amount of swap space in
-    /etc/nixos/configuration.nix later. [yN] |};
-  let input = read_line () in
-  match String.lowercase_ascii input with
-  | "" | "n" -> false
-  | "y" -> true
-  | _ -> (
-    printf "Input must be 'y' (yes) or 'n' (no).\n\n";
-    ask_hibernation ());;
-let hibernation = ask_hibernation ();;
-print_endline "";;
-
 let rec ask_graphical () =
   printf {|Will this be a desktop/graphical install? Ie, do you have a monitor (y)
     or is this a server (n)? [Yn] |};
@@ -209,7 +194,12 @@ if efi then (
 else
   run (sprintf "mkfs.ext4 -L nixos /dev/%s1" selected_disk_name);;
 
-(* Installation *)
+(* Mounting *)
+(* Sometimes when switching between BIOS/UEFI, we need to force the kernel to
+refresh its block index. Otherwise we get "special device does not exist"
+errors. The answer here https://askubuntu.com/questions/334022/mount-error-special-device-does-not-exist
+suggests `blockdev --rereadpt` but that doesn't seem to always work. *)
+(* run (sprintf "blockdev --rereadpt /dev/%s" selected_disk_name);; *)
 run "mount /dev/disk/by-label/nixos /mnt";;
 if efi then (
   run "mkdir -p /mnt/boot";
@@ -328,19 +318,25 @@ utilizing hibernation. In the case of hibernation, max(1GB, RAM + sqrt(RAM)).
 See https://help.ubuntu.com/community/SwapFaq. *)
 let swap_kb =
   let sqrt_ram_kb = ram_kb |> float_of_int |> sqrt |> int_of_float in
-  let x = if hibernation then ram_kb + sqrt_ram_kb else sqrt_ram_kb in
-  max x (1024 * 1024);;
-config := Str.global_replace
-  (* We do our best here to match against the commented out  block. *)
-  (Str.regexp " *# environment.systemPackages = .*\n\\( *# .*\n\\)+")
-  (String.concat "\n" [
-    "  environment.systemPackages = with pkgs; [ home-manager ];";
-    "";
-    {|  # Configure swap file. Sizes are in megabytes.|};
-    sprintf {|  swapDevices = [ { device = "/swapfile"; size = %d; } ];|} (swap_kb / 1024);
-    ""
-  ])
-  !config;;
+  max sqrt_ram_kb (1024 * 1024);;
+let hibernation_swap_kb = ram_kb + swap_kb;;
+config :=
+  let swap_mb = swap_kb / 1024 in
+  let hibernation_swap_mb = hibernation_swap_kb / 1024 in
+  Str.global_replace
+    (* We do our best here to match against the commented out  block. *)
+    (Str.regexp " *# environment.systemPackages = .*\n\\( *# .*\n\\)+")
+    (String.concat "\n" [
+      "  environment.systemPackages = with pkgs; [ home-manager ];";
+      "";
+      sprintf {|  # Configure swap file. Sizes are in megabytes. Default swap is
+  # max(1GB, sqrt(RAM)) = %d. If you want to use hibernation with this device
+  # (eg suspending a laptop), then it's recommended that you use
+  # RAM + max(1GB, sqrt(RAM)) = %d.|} swap_mb hibernation_swap_mb;
+      sprintf {|  swapDevices = [ { device = "/swapfile"; size = %d; } ];|} swap_mb;
+      ""
+    ])
+    !config;;
 
 (* Timezone *)
 let timezone = run_first_line_stdout "curl --silent --fail ipinfo.io | jq -r .timezone";;
