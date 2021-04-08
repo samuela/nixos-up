@@ -246,9 +246,12 @@ config := Str.global_replace
     {|    extraGroups = [ "wheel" "networkmanager" ];|};
     sprintf {|    hashedPassword = "%s";|} hashed_password;
     "  };";
+    "";
+    {|  # Disable password-based login for root.|};
+    {|  users.users.root.hashedPassword = "!";|};
     ""
   ])
-  !config;
+  !config;;
 
 (* Graphical environment *)
 if graphical then (
@@ -331,8 +334,8 @@ config :=
     (Str.regexp " *# environment.systemPackages = .*\n\\( *# .*\n\\)+")
     (String.concat "\n" [
       "  environment.systemPackages = with pkgs; [ home-manager ];";
-      "";
-      sprintf {|  # Configure swap file. Sizes are in megabytes. Default swap is
+      sprintf {|
+  # Configure swap file. Sizes are in megabytes. Default swap is
   # max(1GB, sqrt(RAM)) = %d. If you want to use hibernation with this device
   # (eg suspending a laptop), then it's recommended that you use
   # RAM + max(1GB, sqrt(RAM)) = %d.|} swap_mb hibernation_swap_mb;
@@ -352,7 +355,7 @@ config := Str.global_replace
 (* Write the new config file back out *)
 write_file config_path !config;;
 
-run "nixos-install";;
+run "nixos-install --no-root-passwd";;
 
 print_endline {|
 ================================================================================
