@@ -1,7 +1,7 @@
 #!/usr/bin/env nix-shell
 (*
-curl, mkfs.*, nixos-generate-config, nixos-install already present in the
-environment.
+curl, mkfs.*, nixos-generate-config, nixos-install already present in the live
+ISO environment.
 #!nix-shell -i ocaml -p ocaml jq
 *)
 
@@ -235,7 +235,14 @@ if (not efi) then (
     !config);;
 
 (* Declarative user management *)
-let hashed_password = run_first_line_stdout (sprintf "mkpasswd --method=sha-512 %s" password);;
+(* Using `passwordFile` is a little bit more secure than `hashedPassword` since
+it avoids putting hashed passwords into the world-readable nix store. See
+https://discourse.nixos.org/t/introducing-nixos-up-a-dead-simple-installer-for-nixos/12350/11?u=samuela *)
+let hashed_password = run_first_line_stdout (sprintf "mkpasswd --method=sha-512 %s" password) in
+  let password_file_path = sprintf "/mnt/etc/passwordFile-%s" username in
+  write_file password_file_path hashed_password;
+  Unix.chmod password_file_path 0o600;;
+
 config := Str.global_replace
   (* We do our best here to match against the commented out users block. *)
   (Str.regexp " *# Define a user account\\..*\n\\( *# .*\n\\)+")
@@ -244,7 +251,7 @@ config := Str.global_replace
     sprintf "  users.users.%s = {" username;
     "    isNormalUser = true;";
     {|    extraGroups = [ "wheel" "networkmanager" ];|};
-    sprintf {|    hashedPassword = "%s";|} hashed_password;
+    sprintf {|    passwordFile = "/etc/passwordFile-%s";|} username;
     "  };";
     "";
     {|  # Disable password-based login for root.|};
