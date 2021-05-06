@@ -57,11 +57,11 @@ let disk_size_kb disk =
 print_endline "\nDetected the following disks:\n";;
 List.iteri
   (fun i name ->
-    (* Vendor is not always present. See https://github.com/samuela/nixos-up/issues/2. *)
-    let vendor =
-      let p = sprintf "/sys/block/%s/device/vendor" name in
-      if file_exists p then read_first_line p |> String.trim else "" in
-    let model = read_first_line (sprintf "/sys/block/%s/device/model" name) |> String.trim in
+    let maybe_read fn =
+      if file_exists fn then read_first_line fn |> String.trim else "" in
+    (* Vendor and model are not always present. See https://github.com/samuela/nixos-up/issues/2 and https://github.com/samuela/nixos-up/issues/6. *)
+    let vendor = maybe_read (sprintf "/sys/block/%s/device/vendor" name) in
+    let model = maybe_read (sprintf "/sys/block/%s/device/model" name) in
     let size_gb = (disk_size_kb name |> float_of_int) /. 1024.0 /. 1024.0 in
     printf "%2d: /dev/%s %6s %32s %.3f Gb total \n" (i + 1) name vendor model size_gb)
   disks;;
