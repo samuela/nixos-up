@@ -192,13 +192,26 @@ else (
   run (sprintf "parted /dev/%s -- mkpart primary 1MiB 100%%" selected_disk_name));;
 
 (* Formatting *)
-(* EFI: /dev/sdx1 is boot partition and /dev/sdx2 is root partition. *)
-(* MBR: /dev/sdx1 is root partition and no boot partition. *)
+
+(* Somehow ocaml's standard library doesn't include a built-in for starts_with... *)
+let string_starts_with str prefix = String.length str >= String.length prefix && String.sub str 0 (String.length prefix) = prefix;;
+
+(* Different linux device drivers have different partition naming conventions. *)
+let partition_name disk partition =
+  if string_starts_with disk "sd" then (sprintf "%s%d" disk partition)
+  (* See https://github.com/samuela/nixos-up/issues/7. *)
+  else if string_starts_with disk "nvme" then (sprintf "%sp%d" disk partition)
+  else (
+    print_endline "Warning: this type of device driver has not been thoroughly tested with nixos-up, and its partition naming scheme may differ from what we expect. Please open an issue at https://github.com/samuela/nixos-up/issues.";
+    sprintf "%s%d" disk partition);;
+
 if efi then (
-  run (sprintf "mkfs.fat -F 32 -n boot /dev/%s1" selected_disk_name);
-  run (sprintf "mkfs.ext4 -L nixos /dev/%s2" selected_disk_name))
+  (* EFI: The first partition is boot and the second is the root partition. *)
+  run (sprintf "mkfs.fat -F 32 -n boot /dev/%s" (partition_name selected_disk_name 1));
+  run (sprintf "mkfs.ext4 -L nixos /dev/%s" (partition_name selected_disk_name 2)))
 else
-  run (sprintf "mkfs.ext4 -L nixos /dev/%s1" selected_disk_name);;
+  (* MBR: The first partition is the root partition and there's no boot partition. *)
+  run (sprintf "mkfs.ext4 -L nixos /dev/%s" (partition_name selected_disk_name 1));;
 
 (* Mounting *)
 (* Sometimes when switching between BIOS/UEFI, we need to force the kernel to
