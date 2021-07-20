@@ -378,6 +378,8 @@ config := Str.global_replace
 (* Write the new config file back out *)
 write_file config_path !config;;
 
+(* See https://github.com/samuela/nixos-up/issues/11 *)
+run "nix-build '<nixpkgs/nixos>' -A config.system.build.toplevel -I nixos-config=/mnt/etc/nixos/configuration.nix";;
 run "nixos-install --no-root-passwd";;
 
 print_endline {|
