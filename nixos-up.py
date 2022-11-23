@@ -141,7 +141,6 @@ else:
 ### Formatting
 # Different linux device drivers have different partition naming conventions.
 def partition_name(disk: str, partition: int) -> str:
-  print(f"{disk}p{partition}");
   if disk.startswith("sd"):
     return f"{disk}{partition}"
   elif disk.startswith("nvme"):
