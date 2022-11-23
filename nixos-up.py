@@ -145,7 +145,7 @@ def partition_name(disk: str, partition: int) -> str:
     return f"{disk}{partition}"
   elif disk.startswith("nvme"):
     return f"{disk}p{partition}"
-  elif disk.startswith("blk"):
+  elif disk.startswith("mmc"):
     return f"{disk}p{partition}"
   else:
     print("Warning: this type of device driver has not been thoroughly tested with nixos-up, and its partition naming scheme may differ from what we expect. Please open an issue at https://github.com/samuela/nixos-up/issues.")
