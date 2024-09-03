@@ -32,11 +32,11 @@ def maybe_read_first_line(path: Path) -> str:
   return ""
 
 print("\nDetected the following disks:\n")
-for i, name in enumerate(disks):
+for diskno, name in enumerate(disks, start=1):
   vendor = maybe_read_first_line(sys_block / name / "device" / "vendor")
   model = maybe_read_first_line(sys_block / name / "device" / "model")
   size_gb = float(disk_size_kb(name)) / 1024 / 1024
-  print(f"{i + 1}: /dev/{name:12} {vendor:12} {model:32} {size_gb:.3f} Gb total")
+  print(f"{diskno}: /dev/{name:12} {vendor:12} {model:32} {size_gb:.3f} Gb total")
 print()
 
 def ask_disk() -> int:
