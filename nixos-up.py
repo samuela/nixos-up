@@ -239,7 +239,7 @@ if not efi:
   config = config.replace("boot.loader.grub.version = 2;", f"boot.loader.grub.version = 2;\n  boot.loader.grub.device = \"/dev/{selected_disk_name}\";\n")
 
 # Declarative user management
-# Using `passwordFile` is a little bit more secure than `hashedPassword` since
+# Using `hashedPasswordFile` is a little bit more secure than `hashedPassword` since
 # it avoids putting hashed passwords into the world-readable nix store. See
 # https://discourse.nixos.org/t/introducing-nixos-up-a-dead-simple-installer-for-nixos/12350/11?u=samuela *)
 hashed_password = subprocess.run(["mkpasswd", "--method=sha-512", password], check=True, capture_output=True, text=True).stdout.strip()
@@ -254,7 +254,7 @@ config = re.sub(r" *# Define a user account\..*\n( *# .*\n)+", "\n".join([
   f"  users.users.{username} = {{",
   "    isNormalUser = true;",
   "    extraGroups = [ \"wheel\" \"networkmanager\" ];",
-  f"    passwordFile = \"/etc/passwordFile-{username}\";",
+  f"    hashedPasswordFile = \"/etc/hashedPasswordFile-{username}\";",
   "  };",
   "",
   "  # Disable password-based login for root.",
