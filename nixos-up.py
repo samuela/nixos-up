@@ -13,6 +13,9 @@ import requests
 if os.geteuid() != 0:
   sys.exit("nixos-up must be run as root!")
 
+nixos_version = os.environ["NIXOS_VERSION"][:5]
+print(f"Detected NixOS version {nixos_version}")
+
 if subprocess.run(["mountpoint", "/mnt"]).returncode == 0:
   sys.exit("Something is already mounted at /mnt!")
 
@@ -215,16 +218,17 @@ config = """\
 """ + config
 
 # home-manager
-config = re.sub(r"{ config, pkgs, \.\.\. }:\s+{", f"""\
-{{ config, pkgs, ...}}:
+config = re.sub(r"({ config(, lib)?, pkgs, \.\.\. }):\s+{", f"""\
+\\1:
 
 let
-  home-manager = fetchTarball "https://github.com/nix-community/home-manager/archive/release-21.05.tar.gz";
+  home-manager = fetchTarball "https://github.com/nix-community/home-manager/archive/release-{nixos_version}.tar.gz";
 in
 {{
   # Your home-manager configuration! Check out https://rycee.gitlab.io/home-manager/ for all possible options.
   home-manager.users.{username} = {{ pkgs, ... }}: {{
     home.packages = with pkgs; [ hello ];
+    home.stateVersion = "{nixos_version}";
     programs.starship.enable = true;
   }};
 """, config)
