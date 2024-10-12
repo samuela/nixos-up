@@ -243,10 +243,10 @@ if not efi:
 # it avoids putting hashed passwords into the world-readable nix store. See
 # https://discourse.nixos.org/t/introducing-nixos-up-a-dead-simple-installer-for-nixos/12350/11?u=samuela *)
 hashed_password = subprocess.run(["mkpasswd", "--method=sha-512", password], check=True, capture_output=True, text=True).stdout.strip()
-password_file_path = f"/mnt/etc/passwordFile-{username}"
-with open(password_file_path, "w") as f:
+password_file_path = f"/etc/hashedPasswordFile-{username}"
+with open(f"/mnt{password_file_path}", "w") as f:
   f.write(hashed_password)
-os.chmod(password_file_path, 600)
+os.chmod(f"/mnt{password_file_path}", 600)
 
 # We do our best here to match against the commented out users block.
 config = re.sub(r" *# Define a user account\..*\n( *# .*\n)+", "\n".join([
@@ -254,7 +254,7 @@ config = re.sub(r" *# Define a user account\..*\n( *# .*\n)+", "\n".join([
   f"  users.users.{username} = {{",
   "    isNormalUser = true;",
   "    extraGroups = [ \"wheel\" \"networkmanager\" ];",
-  f"    hashedPasswordFile = \"/etc/hashedPasswordFile-{username}\";",
+  f"    hashedPasswordFile = \"{password_file_path}\";",
   "  };",
   "",
   "  # Disable password-based login for root.",
