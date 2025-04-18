@@ -236,7 +236,25 @@ config = re.sub(r"imports =\s*\[", """imports = [ "${home-manager}/nixos" \n""",
 
 # Non-EFI systems require boot.loader.grub.device to be specified.
 if not efi:
-  config = config.replace("boot.loader.grub.version = 2;", f"boot.loader.grub.version = 2;\n  boot.loader.grub.device = \"/dev/{selected_disk_name}\";\n")
+  grub_enable_pattern = r"(boot\.loader\.grub\.enable\s*=\s*true;)"
+  grub_comment_pattern = r"(# Use the GRUB 2 boot loader\.)"
+  if re.search(grub_enable_pattern, config):
+    config = re.sub(
+      grub_enable_pattern,
+      f"\\1\n  boot.loader.grub.device = \"/dev/{selected_disk_name}\";",
+      config
+    )
+  elif re.search(grub_comment_pattern, config):
+    config = re.sub(
+      grub_comment_pattern,
+      f"\\1\n  boot.loader.grub.enable = true;\n  boot.loader.grub.device = \"/dev/{selected_disk_name}\";",
+      config
+    )
+  else:
+    config = config.replace(
+      "boot.loader = {",
+      f"boot.loader = {{\n  grub.enable = true;\n  grub.device = \"/dev/{selected_disk_name}\";"
+    )
 
 # Declarative user management
 # Using `hashedPasswordFile` is a little bit more secure than `hashedPassword` since
@@ -266,9 +284,11 @@ config = re.sub(r" *# Define a user account\..*\n( *# .*\n)+", "\n".join([
 if graphical:
   config = config.replace("# services.printing.enable = true;", "services.printing.enable = true;")
   config = config.replace("# sound.enable = true;", "sound.enable = true;")
-  config = config.replace("# hardware.pulseaudio.enable = true;", "hardware.pulseaudio.enable = true;")
+  config = config.replace(
+    "# hardware.pulseaudio.enable = true;",
+    "hardware.pulseaudio.enable = false;\n  services.pipewire = {\n    enable = true;\n    alsa.enable = true;\n    alsa.support32Bit = true;\n    pulse.enable = true;\n  };"
+  )
   config = config.replace("# services.xserver.libinput.enable = true;", "services.xserver.libinput.enable = true;")
-  # See https://nixos.wiki/wiki/GNOME.
   config = config.replace("# services.xserver.enable = true;", "services.xserver.enable = true;\n  services.xserver.desktopManager.gnome.enable = true;")
 
 ram_bytes = psutil.virtual_memory().total
